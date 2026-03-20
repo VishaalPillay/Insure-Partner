@@ -324,6 +324,10 @@ flowchart TD
 
 ---
 
+## 🎥 13. Submission Artifacts
+
+•⁠  ⁠*2-Minute Pitch & Strategy Video:* ⁠ [https://www.youtube.com/watch?v=9jKanuTzZm8] ⁠
+
 ## 👨‍💻 Team : Vibe Coders
 
 > *Built for Guidewire DEVTrails 2026*
