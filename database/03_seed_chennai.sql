@@ -1,0 +1,2 @@
+-- Placeholder seed script.
+-- Intended: synthetic demo data (e.g., T. Nagar / Velachery geohashes).

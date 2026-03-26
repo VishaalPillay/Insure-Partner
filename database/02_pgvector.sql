@@ -1,0 +1,2 @@
+-- Placeholder pgvector setup script.
+-- Intended: enable pgvector extension and create similarity-search RPC(s).

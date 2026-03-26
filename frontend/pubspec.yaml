@@ -1,0 +1,22 @@
+name: insure_partner
+description: Placeholder Flutter app scaffold (structure only).
+publish_to: "none"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Placeholder dependency list (to be pinned later).
+  supabase_flutter: any
+  provider: any
+  flutter_map: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

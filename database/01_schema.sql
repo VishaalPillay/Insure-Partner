@@ -1,0 +1,2 @@
+-- Placeholder schema script.
+-- Intended: table creations (riders, policies, claims) and RLS policies.
