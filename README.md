@@ -1,11 +1,13 @@
 # 🛡️ Insure-Partner
 ### *Zero-Touch Parametric Income Protection for Q-Commerce Delivery Partners*
 
-> **Guidewire DEVTrails 2026 — Phase 1 Submission**
+> **Guidewire DEVTrails 2026 — Phase 2 (Core Build)**
 
 [![Flutter](https://img.shields.io/badge/Flutter-Dart-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
 [![PostGIS](https://img.shields.io/badge/PostGIS-PostgreSQL-336791?style=for-the-badge&logo=postgresql)](https://postgis.net)
+[![pgvector](https://img.shields.io/badge/pgvector-RAG-111827?style=for-the-badge)](https://github.com/pgvector/pgvector)
 [![XGBoost](https://img.shields.io/badge/XGBoost-ML-FF6600?style=for-the-badge)](https://xgboost.readthedocs.io)
 [![Redis](https://img.shields.io/badge/Redis-Celery-DC382D?style=for-the-badge&logo=redis)](https://redis.io)
 
@@ -63,7 +65,7 @@ Gig workers operate on a **week-to-week earning and payout cycle**. Our premium 
 
 ### How It Works
 
-Every **Sunday at 11:59 PM**, a background **Celery job** automatically calculates the rider's premium for the upcoming 7 days using our **XGBoost pricing model**:
+Every **Sunday at 11:59 PM**, a background job (planned: **Celery** on **Redis**) calculates the rider's premium for the upcoming 7 days using a **gradient-boosted pricing model** (architecture: **XGBoost**; Phase 2 backend scaffold uses **scikit-learn** for the ML execution layer until models are wired end-to-end):
 
 ```
 Weekly Premium = Base Rate × 7-Day Weather Risk Score × Zone Historical Risk Score
@@ -73,7 +75,7 @@ Weekly Premium = Base Rate × 7-Day Weather Risk Score × Zone Historical Risk S
 |---|---|
 | Base Rate | Platform-defined floor rate |
 | Weather Risk Score | OpenWeatherMap 7-day forecast |
-| Zone Historical Risk Score | PostGIS historical claim density per geohash |
+| Zone Historical Risk Score | Spatial / geohash historical claim density (PostGIS-style queries on Supabase Postgres) |
 
 The rider receives a **push notification** confirming their coverage before the new week begins — no surprises, no hidden charges.
 
@@ -93,11 +95,11 @@ Standard APIs cannot detect social events like strikes or rallies. Our **RAG (Re
 An **LLM-as-a-Judge agent** evaluates each event against a strict JSON schema. A payout is triggered **only** if:
 - Strike/disruption is **confirmed active** (not historical or speculative)
 - Confidence score exceeds **95%**
-- The rider's geohash is **spatially contained** within the disruption zone (PostGIS `ST_Contains`)
+- The rider's geohash is **spatially contained** within the disruption zone (PostGIS `ST_Contains` on Supabase Postgres where enabled)
 
 ### Tier 2 — Secondary Macro Trigger (Deterministic Environmental)
 
-Event-driven Celery polling of **OpenWeatherMap** and **Traffic APIs**. Triggers automatically when measurable thresholds are breached:
+Event-driven polling (planned: **Celery** workers) of **OpenWeatherMap** and **Traffic APIs**. Triggers automatically when measurable thresholds are breached:
 
 | Parameter | Threshold |
 |---|---|
@@ -122,10 +124,10 @@ Insure-Partner integrates AI at every layer of the pipeline, not just as a marke
 - **Input features:** Historical zone risk (PostGIS claim density), 7-day weather forecast, weekly delivery volume, time-of-year seasonality
 - **Output:** Personalized weekly premium per rider
 - **Training data:** Simulated historical claim datasets + OpenWeatherMap historical records
-- Runs every Sunday night via Celery task queue
+- **Runtime:** Planned Sunday job via Celery; inference hooks live under `backend/services/pricing_ml/`
 
 ### 5b. LLM-as-a-Judge — RAG Strike Detection Agent
-- **Framework:** FastAPI + RAG pipeline (FAISS / pgvector)
+- **Framework:** FastAPI + RAG pipeline (**pgvector** in Supabase for embeddings; FAISS optional for local dev)
 - **Role:** Evaluates whether a news/social event constitutes a validated, active, hyperlocal disruption
 - **Output schema:** Strict JSON `{ event_type, confidence_score, geohash, active_now }` — no free-form hallucination
 - **Threshold enforcement:** Only `confidence_score > 0.95` with `active_now: true` fires a claim event
@@ -272,34 +274,46 @@ flowchart TD
 | Layer | Technology | Justification |
 |---|---|---|
 | **Mobile Frontend** | Flutter (Dart) | Native Isolates for background sensor fusion; 60fps WebSocket map rendering; offline-first SQLite/Hive storage |
-| **Backend API** | Python + FastAPI | Async-first, high-throughput; ideal for event-driven WebSocket broadcasting |
-| **Task Queue** | Celery + Redis | Reliable scheduled jobs (Sunday pricing), async backfill, API polling workers |
-| **Database** | PostgreSQL + PostGIS | `ST_Contains` spatial queries for geohash validation and hazard polygon storage |
-| **ML Models** | XGBoost, YOLO (CV) | XGBoost for pricing + fraud isolation; YOLO for lightweight edge-deployable image verification |
-| **RAG Pipeline** | FastAPI + pgvector / FAISS | Retrieval-augmented generation for local news ingestion and LLM strike detection |
+| **Backend API** | Python + FastAPI (`backend/`) | Async-first; deployable to Render; WebSocket broadcasting |
+| **Database & Auth** | Supabase (Postgres) | Managed Postgres, RLS, client SDKs; SQL migrations in `database/` |
+| **Spatial + Vectors** | PostGIS + **pgvector** | `ST_Contains` and geohazard storage; embedding storage and similarity search for RAG (`02_pgvector.sql`) |
+| **Task Queue** | Celery + Redis *(planned)* | Sunday pricing, async polling workers — not yet in `requirements.txt`; Phase 3+ wiring |
+| **ML — Pricing** | scikit-learn / XGBoost | `backend/services/pricing_ml/`; sklearn in Phase 2 deps; XGBoost as target for production model |
+| **ML — CV / Fraud** | YOLO, Isolation Forest | As described in Sections 5c–5d; artifacts under `backend/ai_models/` when added |
+| **RAG** | LangChain + pgvector | `backend/services/rag_engine/` |
 | **Payments** | Razorpay Sandbox | Simulated instant payout webhooks for demo |
 | **External APIs** | OpenWeatherMap, Google Routes API, Zepto Mock API | Weather triggers, traffic data, platform shift status |
+
+**Alignment note:** Phase 1 documentation emphasized PostGIS, Celery, and XGBoost as the *target* architecture. The **Phase 2 repository** is scaffolded around **Supabase**, **pgvector** SQL scripts, **LangChain**, and **scikit-learn** in [`backend/requirements.txt`](backend/requirements.txt); Celery/XGBoost integration is tracked in the roadmap below.
+
+---
+
 
 ---
 
 ## 🗓️ 11. Development Roadmap
 
-### Phase 1 — Foundation (Current Submission)
+### Phase 1 — Foundation *(complete)*
 - [x] System architecture design and workflow documentation
 - [x] Parametric trigger logic definition (RAG, Deterministic, CV)
 - [x] Anti-spoofing architecture design (Velocity AI + Sensor Fusion)
 - [x] Weekly XGBoost pricing model design
 - [x] Crowdsourced disruption mesh design
 
-### Phase 2 — Core Build
-- [ ] Flutter app: OTP onboarding, live map, claim camera, WebSocket hazard mesh
-- [ ] FastAPI backend: Celery workers, RAG ingestion pipeline, WebSocket broadcaster
-- [ ] PostGIS schema: Geohash tables, Hazard Polygons, Policy records
-- [ ] XGBoost model: Training on synthetic historical data, Sunday pricing job
+### Phase 2 — Core Build *(current)*
+- [x] Monorepo layout: `backend/`, `database/`, `frontend/`, `docs/` with placeholder files
+- [x] Per-folder README files for backend, database, and frontend
+- [ ] Flutter app: OTP onboarding, live map, claim camera, WebSocket hazard mesh (`frontend/`)
+- [ ] FastAPI backend: app factory, routers, RAG + pricing services, WebSocket broadcaster (`backend/`)
+- [ ] Supabase SQL: schema + RLS (`01_schema.sql`), pgvector RPC (`02_pgvector.sql`), Chennai seed data (`03_seed_chennai.sql`)
+- [ ] Pricing ML: train/serve model artifacts in `ai_models/` and wire `pricing_ml/`
+- [ ] Mock triggers: OpenWeatherMap / Zepto-style polling in `mock_triggers/`
+- [ ] Deploy backend to Render; configure Supabase project and env vars
 
 ### Phase 3 — AI Integration & Hardening
-- [ ] LLM-as-a-Judge integration with strict JSON schema enforcement
-- [ ] YOLO CV model integration and mobile optimization
+- [ ] Celery + Redis: Sunday premium job, polling workers
+- [ ] LLM-as-a-Judge with strict JSON schema enforcement
+- [ ] YOLO CV integration and mobile optimization
 - [ ] Spatio-Temporal Trajectory AI (Velocity Anomaly + Sensor Fusion)
 - [ ] Razorpay Sandbox integration and Escrow state machine
 
