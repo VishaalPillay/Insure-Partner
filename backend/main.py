@@ -1,11 +1,20 @@
-"""
-Placeholder app entry point.
+# backend/main.py
 
-This file exists to reserve the intended location for the FastAPI app entrypoint,
-middleware, and WebSocket broadcaster described in the root README.
-"""
+from fastapi import FastAPI
+from backend.api.endpoints import pricing
 
-if __name__ == "__main__":
-    raise SystemExit(
-        "Placeholder only. Scaffolded per repository structure; implementation pending."
-    )
+app = FastAPI(
+    title="Insure-Partner API",
+    description="Backend API for Q-Commerce parametric insurance platform",
+    version="0.1.0"
+)
+
+# Include the routing for our pricing endpoints
+app.include_router(pricing.router, prefix="/api/v1/pricing", tags=["Pricing ML"])
+
+@app.get("/")
+async def root():
+    return {"message": "Insure-Partner API is running. Systems nominal."}
+
+# To run the server, use this command in your terminal:
+# uvicorn backend.main:app --reload
