@@ -15,6 +15,3 @@ app.include_router(pricing.router, prefix="/api/v1/pricing", tags=["Pricing ML"]
 @app.get("/")
 async def root():
     return {"message": "Insure-Partner API is running. Systems nominal."}
-
-# To run the server, use this command in your terminal:
-# uvicorn backend.main:app --reload
