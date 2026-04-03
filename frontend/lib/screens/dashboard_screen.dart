@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
@@ -18,6 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -35,10 +37,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchData();
     });
+
+    // Update countdown periodically
+    _countdownTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
@@ -54,6 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         geohash: rider.currentGeohash ?? 'tdr5x',
       );
       premium.loadActivePolicies(rider.id);
+      premium.listenToLatestPolicy(rider.id);
     }
   }
 
@@ -324,7 +333,87 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 const SizedBox(height: 20),
 
-                if (premium.isLoading)
+                if (premium.latestActivePolicy != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '₹',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            premium.latestActivePolicy!.weeklyPremiumInr
+                                .toStringAsFixed(0),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 44,
+                              fontWeight: FontWeight.w700,
+                              height: 1,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              SizedBox(height: 16),
+                              Text(
+                                'This Week',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.success.withOpacity(0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.timer_outlined,
+                              color: AppTheme.success,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Coverage ends in ${_getCountdownText(premium.latestActivePolicy!.endDate)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                else if (premium.isLoading)
                   const SizedBox(
                     height: 60,
                     child: Center(
@@ -352,7 +441,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           const SizedBox(width: 4),
                           Text(
                             premium.premiumResult!.weeklyPremiumInr
-                                .toStringAsFixed(2),
+                                .toStringAsFixed(0),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 44,
@@ -500,7 +589,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           text: 'Accept & Activate Coverage',
           icon: Icons.verified_rounded,
           isLoading: premium.isLoading,
-          onPressed: rider != null
+          onPressed: rider != null && premium.latestActivePolicy == null
               ? () => premium.acceptPolicy(riderId: rider.id)
               : null,
         ),
@@ -734,5 +823,24 @@ class _DashboardScreenState extends State<DashboardScreen>
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${date.day} ${months[date.month - 1]}';
+  }
+
+  String _getCountdownText(DateTime endDate) {
+    final diff = endDate.difference(DateTime.now());
+    if (diff.isNegative) return 'Expired';
+    final days = diff.inDays;
+    final hours = diff.inHours.remainder(24);
+    final minutes = diff.inMinutes.remainder(60);
+
+    if (days > 0) {
+      if (hours > 0) {
+        return '$days days, $hours hrs';
+      }
+      return '$days days';
+    } else if (hours > 0) {
+      return '$hours hrs, $minutes mins';
+    } else {
+      return '$minutes mins';
+    }
   }
 }

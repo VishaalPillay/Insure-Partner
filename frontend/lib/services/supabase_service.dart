@@ -65,4 +65,14 @@ class SupabaseService {
         .map((json) => Policy.fromJson(json))
         .toList();
   }
+
+  /// Get a real-time stream of the latest active policy for a rider.
+  Stream<List<Map<String, dynamic>>> getLatestPolicyStream(String riderId) {
+    return _client
+        .from('policies')
+        .stream(primaryKey: ['id'])
+        .eq('rider_id', riderId)
+        .order('created_at', ascending: false)
+        .limit(1);
+  }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/premium_result.dart';
 import '../models/policy.dart';
@@ -13,6 +14,11 @@ class PremiumProvider extends ChangeNotifier {
 
   List<Policy> _activePolicies = [];
   List<Policy> get activePolicies => _activePolicies;
+
+  Policy? _latestActivePolicy;
+  Policy? get latestActivePolicy => _latestActivePolicy;
+
+  StreamSubscription<List<Map<String, dynamic>>>? _policySubscription;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -85,5 +91,40 @@ class PremiumProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Failed to load policies: ${e.toString()}';
     }
+  }
+
+  /// Listen to the real-time stream of the latest policy for the rider.
+  void listenToLatestPolicy(String riderId) {
+    _policySubscription?.cancel();
+
+    _policySubscription = _db.getLatestPolicyStream(riderId).listen((data) {
+      if (data.isNotEmpty) {
+        final policy = Policy.fromJson(data.first);
+        if (policy.isActive) {
+          _latestActivePolicy = policy;
+          // As a bonus, we can also ensure it is in the _activePolicies list if needed, 
+          // but we'll primarily use _latestActivePolicy for the dashboard.
+        } else {
+          _latestActivePolicy = null;
+        }
+      } else {
+        _latestActivePolicy = null;
+      }
+      notifyListeners();
+    }, onError: (error) {
+      _errorMessage = 'Policy stream error: ${error.toString()}';
+      notifyListeners();
+    });
+  }
+
+  void stopListening() {
+    _policySubscription?.cancel();
+    _policySubscription = null;
+  }
+
+  @override
+  void dispose() {
+    stopListening();
+    super.dispose();
   }
 }
