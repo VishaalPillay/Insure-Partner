@@ -65,3 +65,11 @@ frontend/android/key.properties
 # Windows Desktop (if relevant in flutter)
 flutter_export_environment.sh
 flutter_export_environment.bat
+
+# Auto-generated Flutter platform directories
+frontend/.metadata
+frontend/ios/
+frontend/macos/
+frontend/linux/
+frontend/windows/
+frontend/web/
