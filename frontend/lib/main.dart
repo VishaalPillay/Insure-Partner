@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_theme.dart';
-import 'core/constants.dart';
 import 'providers/auth_provider.dart';
 import 'providers/premium_provider.dart';
 import 'screens/login_screen.dart';
@@ -15,13 +14,17 @@ import 'screens/dashboard_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from .env asset
+  // Load .env file
   await dotenv.load(fileName: '.env');
 
-  // Initialize Supabase
+  // Debug check (remove later if you want)
+  print("SUPABASE_URL: ${dotenv.env['SUPABASE_URL']}");
+  print("SUPABASE_KEY: ${dotenv.env['SUPABASE_ANON_KEY']}");
+
+  // Initialize Supabase safely
   await Supabase.initialize(
-    url: AppConstants.supabaseUrl,
-    anonKey: AppConstants.supabaseAnonKey,
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   runApp(const InsurePartnerApp());
@@ -34,8 +37,12 @@ class InsurePartnerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PremiumProvider()),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (_) => AuthProvider(),
+        ),
+        ChangeNotifierProvider<PremiumProvider>(
+          create: (_) => PremiumProvider(),
+        ),
       ],
       child: MaterialApp(
         title: 'Insure-Partner',
@@ -47,7 +54,7 @@ class InsurePartnerApp extends StatelessWidget {
   }
 }
 
-/// Routes to the correct screen based on auth state.
+/// Handles routing based on authentication state
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -72,13 +79,15 @@ class AuthGate extends StatelessWidget {
       case AppAuthState.unauthenticated:
       case AppAuthState.otpSent:
         return const LoginScreen(key: ValueKey('login'));
+
       case AppAuthState.detailsRequired:
         return const UserDetailsScreen(key: ValueKey('details'));
+
       case AppAuthState.platformConnect:
         return const PlatformConnectScreen(key: ValueKey('platform'));
+
       case AppAuthState.authenticated:
         return const DashboardScreen(key: ValueKey('dashboard'));
     }
-    return const SizedBox();
   }
 }
