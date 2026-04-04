@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insure-Partner</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --primary: #00ffcc;
+            --danger: #ff4444;
+            --text-main: #c9d1d9;
+            --border: #30363d;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            padding: 2rem;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        h1 {
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            background-color: #0d1117;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .btn-primary { background-color: var(--primary); color: #000; }
+        .btn-danger { background-color: var(--danger); color: #fff; }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            right: 30px;
+            font-size: 17px;
+            border-left: 4px solid var(--primary);
+        }
+
+        #toast.show { visibility: visible; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <h1>Admin Control Panel</h1>
+
+        <div class="card">
+            <div class="card-title">Sunday Cron Simulator</div>
+            
+            <div class="form-group">
+                <label>Season Profile</label>
+                <select id="seasonSelect">
+                    <option value="summer">Summer</option>
+                    <option value="monsoon">Monsoon</option>
+                    <option value="winter">Winter</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Forecasted Rainfall (mm)</label>
+                <input type="number" id="rainfallInput" value="150.0" step="0.1">
+            </div>
+
+            <button class="btn-primary" onclick="triggerPricing()">Execute Weekly Pricing Engine</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Disaster Simulation</div>
+            
+            <div class="form-group">
+                <label>Geohash Target Zone</label>
+                <select id="geohashSelect">
+                    <option value="tdr5w">Velachery (tdr5w)</option>
+                    <option value="tdr5x">T.Nagar (tdr5x)</option>
+                    <option value="tdr6n">Anna Nagar (tdr6n)</option>
+                    <option value="tdr68">Guindy (tdr68)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Disaster Type</label>
+                <select id="disasterSelect">
+                    <option value="flood">Flash Flood</option>
+                    <option value="strike">Local Strike</option>
+                    <option value="outage">Power Outage</option>
+                </select>
+            </div>
+
+            <button class="btn-danger" onclick="triggerClaim()">Trigger Zero-Touch Claim</button>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8000/api/v1";
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.style.borderLeftColor = isError ? "var(--danger)" : "var(--primary)";
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        async function triggerPricing() {
+            const season = document.getElementById('seasonSelect').value;
+            const rainfall = parseFloat(document.getElementById('rainfallInput').value);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/force-sunday-pricing`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        season: season,
+                        forecasted_rainfall_mm: rainfall
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast(`Success: Processed ${data.processed_riders} riders.`);
+                } else {
+                    showToast(`Error: ${data.detail}`, true);
+                }
+            } catch (error) {
+                showToast("Connection failed. Is the backend running?", true);
+                console.error(error);
+            }
+        }
+
+        function triggerClaim() {
+            // UI only for now, wire this up in the next phase
+            showToast("Disaster simulated. Zero-touch claims initiated.");
+        }
+    </script>
+</body>
+</html>

@@ -70,50 +70,52 @@ class _OtpInputState extends State<OtpInput> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(widget.length, (index) {
-        return Container(
-          width: 48,
-          height: 56,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          child: KeyboardListener(
-            focusNode: FocusNode(),
-            onKeyEvent: (event) => _onKeyPress(index, event),
-            child: TextField(
-              controller: _controllers[index],
-              focusNode: _focusNodes[index],
-              textAlign: TextAlign.center,
-              maxLength: 1,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-              ),
-              decoration: InputDecoration(
-                counterText: '',
-                filled: true,
-                fillColor: AppTheme.surfaceLight,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+        return Expanded(
+          child: Container(
+            height: 56,
+            constraints: const BoxConstraints(maxWidth: 48),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            child: KeyboardListener(
+              focusNode: FocusNode(),
+              onKeyEvent: (event) => _onKeyPress(index, event),
+              child: TextField(
+                controller: _controllers[index],
+                focusNode: _focusNodes[index],
+                textAlign: TextAlign.center,
+                maxLength: 1,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF2A2A4A),
-                    width: 1,
+                decoration: InputDecoration(
+                  counterText: '',
+                  filled: true,
+                  fillColor: AppTheme.surfaceLight,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2A2A4A),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppTheme.primary,
-                    width: 2,
-                  ),
-                ),
+                onChanged: (value) => _onChanged(index, value),
               ),
-              onChanged: (value) => _onChanged(index, value),
             ),
           ),
         );

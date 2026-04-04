@@ -3,6 +3,23 @@
 import os
 import joblib
 import numpy as np
+from pydantic import BaseModel
+
+# The client now only sends the absolute minimum
+class PricingRequest(BaseModel):
+    rider_id: str
+
+# Hardcoded risk profiles for Chennai zones (using geohash prefixes)
+ZONE_RISK = {
+    'tdr5w': {'summer': 2.0, 'monsoon': 4.5, 'winter': 1.5},  # Velachery
+    'tdr6n': {'summer': 1.5, 'monsoon': 3.0, 'winter': 1.2},  # Anna Nagar
+    'tdr5x': {'summer': 1.8, 'monsoon': 4.0, 'winter': 1.4},  # T.Nagar
+    'tdr68': {'summer': 1.6, 'monsoon': 3.5, 'winter': 1.3},  # Guindy
+    'tdr5z': {'summer': 1.4, 'monsoon': 2.8, 'winter': 1.1},  # Adyar
+    'tdr5y': {'summer': 1.5, 'monsoon': 3.2, 'winter': 1.2},  # Mylapore
+    'tdr6p': {'summer': 1.7, 'monsoon': 3.6, 'winter': 1.3},  # Ambattur
+    'tdr6j': {'summer': 1.6, 'monsoon': 3.4, 'winter': 1.2},  # Perambur
+}
 
 class PricingPredictor:
     def __init__(self):
@@ -11,48 +28,41 @@ class PricingPredictor:
         self._load_model()
 
     def _load_model(self):
-        # Load the model into memory
         if os.path.exists(self.model_path):
             self.model = joblib.load(self.model_path)
         else:
             print(f"Warning: Model not found at {self.model_path}. Please ensure the .pkl file exists.")
 
-    def get_premium(self, geohash: str) -> float:
-        # Mock data fetching based on the rider's geohash
-        if geohash == 'tf343':  # Velachery
-            weather_risk_score = 0.9
-            historical_zone_risk = 0.8
-        elif geohash == 'tf346':  # T. Nagar
-            weather_risk_score = 0.2
-            historical_zone_risk = 0.4
-        else:
-            # Default baseline risk for other areas
-            weather_risk_score = 0.4
-            historical_zone_risk = 0.5
-        
-        # Base variables
-        base_rate = 50.0
-        seasonality_index = 1.2
-
+    def calculate_premium(self, rider_id: str, geohash: str, season: str, rainfall_mm: float, weekly_volume: int) -> float:
+        """Calculates the weekly premium internally based on external risk triggers."""
         if not self.model:
-            # Fallback calculation if the model file is temporarily missing
-            predicted_premium = base_rate + (weather_risk_score * 40) + (historical_zone_risk * 60)
-            return round(max(predicted_premium, 150.00), 2)
+            raise RuntimeError("Pricing model is not loaded.")
+        
+        # 1. Look up the historical risk for the rider's zone
+        zone_prefix = geohash[:5]  # Grab the first 5 chars of the geohash
+        zone_data = ZONE_RISK.get(zone_prefix, {'summer': 2.0, 'monsoon': 3.0, 'winter': 1.5})
+        zone_historical_risk = zone_data.get(season, 1.5)
 
-        # Structure the features strictly for the XGBoost model
+        # 2. Derive weather risk score from the forecasted rainfall
+        # Replicating the risk logic from training: 50mm rain adds 6.0 risk
+        base_score = 1.0
+        rain_factor = (rainfall_mm / 50.0) * 6.0
+        weather_risk_score = min(max(base_score + rain_factor, 1.0), 10.0)
+        
+        # 3. Apply a basic seasonality index
+        seasonality_index = 1.3 if season == 'monsoon' else 1.0
+        
         features = np.array([[
-            base_rate,
             weather_risk_score,
-            historical_zone_risk,
+            zone_historical_risk,
+            weekly_volume,
             seasonality_index
         ]])
         
-        # Predict the premium
         prediction = self.model.predict(features)
         predicted_premium = round(float(prediction[0]), 2)
         
-        # Enforce a hard floor rate of 150.00 INR
+        # Hard floor rate
         return max(predicted_premium, 150.00)
 
-# Instantiate a singleton to be used across the app
 pricing_engine = PricingPredictor()
