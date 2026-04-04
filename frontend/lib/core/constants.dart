@@ -4,7 +4,7 @@ class AppConstants {
   // ── API ──
   static String get pricingApiUrl =>
       dotenv.env['PRICING_API_URL'] ??
-      'https://insure-partner.onrender.com/api/v1/pricing/calculate-premium';
+      'http://localhost:8000/api/v1/pricing/calculate-premium';
 
   static String get supabaseUrl =>
       dotenv.env['SUPABASE_URL'] ?? '';

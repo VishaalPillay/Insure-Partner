@@ -32,7 +32,6 @@ class PremiumProvider extends ChangeNotifier {
   /// Call the backend pricing endpoint — sends only rider_id + geohash.
   Future<void> fetchPremium({
     required String riderId,
-    required String geohash,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -42,7 +41,6 @@ class PremiumProvider extends ChangeNotifier {
     try {
       _premiumResult = await _pricingService.calculatePremium(
         riderId: riderId,
-        geohash: geohash,
       );
     } catch (e) {
       _errorMessage = e.toString();
@@ -83,6 +81,23 @@ class PremiumProvider extends ChangeNotifier {
     }
   }
 
+  /// Mark the policy as paid natively via Supabase trigger.
+  Future<void> payPolicy(String policyId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _db.markPolicyPaid(policyId);
+      // Supabase realtime stream handles the UI update automatically!
+    } catch (e) {
+      _errorMessage = 'Payment execution failed: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Load all active policies for the rider.
   Future<void> loadActivePolicies(String riderId) async {
     try {
@@ -102,8 +117,10 @@ class PremiumProvider extends ChangeNotifier {
         final policy = Policy.fromJson(data.first);
         if (policy.isActive) {
           _latestActivePolicy = policy;
-          // As a bonus, we can also ensure it is in the _activePolicies list if needed, 
-          // but we'll primarily use _latestActivePolicy for the dashboard.
+          // If a paid policy arrives, clear any old calculation errors
+          if (policy.isPaid) {
+            _errorMessage = null;
+          }
         } else {
           _latestActivePolicy = null;
         }

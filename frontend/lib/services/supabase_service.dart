@@ -75,4 +75,9 @@ class SupabaseService {
         .order('created_at', ascending: false)
         .limit(1);
   }
+
+  /// Direct method to flip the boolean in the database via ID.
+  Future<void> markPolicyPaid(String policyId) async {
+    await _client.from('policies').update({'is_paid': true}).eq('id', policyId);
+  }
 }

@@ -59,7 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (rider != null) {
       premium.fetchPremium(
         riderId: rider.id,
-        geohash: rider.currentGeohash ?? 'tdr5x',
       );
       premium.loadActivePolicies(rider.id);
       premium.listenToLatestPolicy(rider.id);
@@ -109,14 +108,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 20),
 
                     // ── Accept / Active Status ──
-                    if (premium.premiumResult != null && !premium.isLoading)
-                      _buildActionSection(premium, rider),
+                    _buildActionSection(premium, rider),
 
-                    // ── Active Policies ──
-                    if (premium.activePolicies.isNotEmpty) ...[
-                      const SizedBox(height: 28),
-                      _buildPoliciesSection(premium),
-                    ],
+                    // (Active Policies rendering removed per user instruction)
+
 
                     // ── Error ──
                     if (premium.errorMessage != null) ...[
@@ -224,15 +219,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
 
-        // Sign Out
-        IconButton(
-          onPressed: () => auth.signOut(),
-          icon: const Icon(
-            Icons.logout_rounded,
-            color: AppTheme.textSecondary,
-            size: 22,
-          ),
-        ),
       ],
     );
   }
@@ -578,29 +564,45 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ═══════════════════════════════════════════════
 
   Widget _buildActionSection(PremiumProvider premium, rider) {
-    if (premium.isPolicyAccepted) {
-      return _buildAcceptedCard();
+    final activePol = premium.latestActivePolicy;
+
+    // If there is an active policy assigned to this user from Sunday cron, check if it's paid.
+    if (activePol != null) {
+      if (activePol.isPaid) {
+        return _buildAcceptedCard();
+      } else {
+        return Column(
+          children: [
+            const SizedBox(height: 4),
+            GradientButton(
+              text: 'Pay Now',
+              icon: Icons.payment_rounded,
+              isLoading: premium.isLoading,
+              onPressed: () => premium.payPolicy(activePol.id!),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Secure your weekly policy to activate coverage.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        );
+      }
     }
 
+    // Fallback if they are looking at the onboarding dynamic quote
     return Column(
       children: [
         const SizedBox(height: 4),
         GradientButton(
-          text: 'Accept & Activate Coverage',
-          icon: Icons.verified_rounded,
-          isLoading: premium.isLoading,
-          onPressed: rider != null && premium.latestActivePolicy == null
-              ? () => premium.acceptPolicy(riderId: rider.id)
-              : null,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'By accepting, a 7-day policy record is created in Supabase',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 12,
-          ),
+          text: 'Waiting For Weekly Pricing ⏳',
+          icon: Icons.hourglass_empty_rounded,
+          isLoading: false,
+          onPressed: null,
         ),
       ],
     );
@@ -646,16 +648,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Coverage Activated! ✅',
+                  'Coverage Activated! ✅\nThis Week\'s Premium Paid.',
                   style: TextStyle(
                     color: AppTheme.success,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Valid until ${_formatDate(DateTime.now().add(const Duration(days: 7)))}',
+                const Text(
+                  'Policy locked globally. Claims active.',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 13,
@@ -669,91 +671,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════
-  // ── Active Policies Section
-  // ═══════════════════════════════════════════════
+  // (Active Policies section removed)
 
-  Widget _buildPoliciesSection(PremiumProvider premium) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Active Policies',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...premium.activePolicies.map((policy) {
-          return GlassCard(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.policy_rounded,
-                    color: AppTheme.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '₹${policy.weeklyPremiumInr.toStringAsFixed(2)} / week',
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${_formatDate(policy.startDate)} → ${_formatDate(policy.endDate)}',
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.success.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Active',
-                    style: TextStyle(
-                      color: AppTheme.success,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
-    );
-  }
 
   // ═══════════════════════════════════════════════
   // ── Error
@@ -815,14 +734,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _getZoneName(String? geohash) {
     if (geohash == null) return 'Unknown';
     return AppConstants.chennaiZones[geohash] ?? geohash;
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${date.day} ${months[date.month - 1]}';
   }
 
   String _getCountdownText(DateTime endDate) {

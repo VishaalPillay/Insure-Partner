@@ -5,6 +5,7 @@ class Policy {
   final DateTime endDate;
   final double weeklyPremiumInr;
   final bool isActive;
+  final bool isPaid;
   final DateTime? createdAt;
 
   Policy({
@@ -14,6 +15,7 @@ class Policy {
     required this.endDate,
     required this.weeklyPremiumInr,
     this.isActive = true,
+    this.isPaid = false,
     this.createdAt,
   });
 
@@ -25,6 +27,7 @@ class Policy {
       endDate: DateTime.parse(json['end_date'] as String),
       weeklyPremiumInr: (json['weekly_premium_inr'] as num).toDouble(),
       isActive: json['is_active'] as bool? ?? true,
+      isPaid: json['is_paid'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -38,6 +41,7 @@ class Policy {
       'end_date': endDate.toIso8601String(),
       'weekly_premium_inr': weeklyPremiumInr,
       'is_active': isActive,
+      'is_paid': isPaid,
     };
   }
 }

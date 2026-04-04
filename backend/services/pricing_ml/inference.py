@@ -11,14 +11,14 @@ class PricingRequest(BaseModel):
 
 # Hardcoded risk profiles for Chennai zones (using geohash prefixes)
 ZONE_RISK = {
-    'tdr5w': {'summer': 2.0, 'monsoon': 4.5, 'winter': 1.5},  # Velachery
-    'tdr6n': {'summer': 1.5, 'monsoon': 3.0, 'winter': 1.2},  # Anna Nagar
-    'tdr5x': {'summer': 1.8, 'monsoon': 4.0, 'winter': 1.4},  # T.Nagar
-    'tdr68': {'summer': 1.6, 'monsoon': 3.5, 'winter': 1.3},  # Guindy
-    'tdr5z': {'summer': 1.4, 'monsoon': 2.8, 'winter': 1.1},  # Adyar
-    'tdr5y': {'summer': 1.5, 'monsoon': 3.2, 'winter': 1.2},  # Mylapore
-    'tdr6p': {'summer': 1.7, 'monsoon': 3.6, 'winter': 1.3},  # Ambattur
-    'tdr6j': {'summer': 1.6, 'monsoon': 3.4, 'winter': 1.2},  # Perambur
+    'tdr5w': {'summer': 1.0, 'monsoon': 1.5, 'winter': 2.0},  # Velachery
+    'tdr6n': {'summer': 0.5, 'monsoon': 1.0, 'winter': 1.9},  # Anna Nagar
+    'tdr5x': {'summer': 0.8, 'monsoon': 1.6, 'winter': 1.4},  # T.Nagar
+    'tdr68': {'summer': 0.6, 'monsoon': 1.5, 'winter': 1.7},  # Guindy
+    'tdr5z': {'summer': 0.4, 'monsoon': 1.8, 'winter': 1.1},  # Adyar
+    'tdr5y': {'summer': 0.5, 'monsoon': 1.2, 'winter': 1.6},  # Mylapore
+    'tdr6p': {'summer': 0.7, 'monsoon': 1.6, 'winter': 1.8},  # Ambattur
+    'tdr6j': {'summer': 0.6, 'monsoon': 1.4, 'winter': 1.8},  # Perambur
 }
 
 class PricingPredictor:

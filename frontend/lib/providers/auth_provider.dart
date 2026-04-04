@@ -65,8 +65,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _phoneNumber = phone;
-      await _supabase.auth.signInWithOtp(phone: phone);
+      String formattedPhone = phone.trim();
+      if (!formattedPhone.startsWith('+')) {
+        // Assuming India (+91) as default for Chennai zones, prepend to raw digits
+        formattedPhone = '+91$formattedPhone';
+      }
+
+      _phoneNumber = formattedPhone;
+      await _supabase.auth.signInWithOtp(phone: formattedPhone);
       _state = AppAuthState.otpSent;
     } on AuthApiException catch (e) {
       if (e.message.contains('phone_provider_disabled') || e.code == 'phone_provider_disabled') {

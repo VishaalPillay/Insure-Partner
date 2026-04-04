@@ -9,7 +9,7 @@ import 'providers/premium_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/user_details_screen.dart';
 import 'screens/platform_connect_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/home_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,7 +87,7 @@ class AuthGate extends StatelessWidget {
         return const PlatformConnectScreen(key: ValueKey('platform'));
 
       case AppAuthState.authenticated:
-        return const DashboardScreen(key: ValueKey('dashboard'));
+        return const HomeNavigation(key: ValueKey('navigation'));
     }
   }
 }

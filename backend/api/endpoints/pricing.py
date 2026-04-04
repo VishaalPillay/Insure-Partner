@@ -21,48 +21,40 @@ def get_supabase_client() -> Client:
         )
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-@router.post("/force-sunday-pricing")
-async def force_sunday_pricing():
+@router.post("/calculate-premium")
+async def get_weekly_premium(request: dict):
+    from backend.services.pricing_ml.inference import PricingRequest
+    
+    # We parse manually so we can adapt gracefully
+    rider_id = request.get("rider_id")
+    if not rider_id:
+        raise HTTPException(status_code=400, detail="rider_id is required")
+
     try:
         supabase = get_supabase_client()
         
-        # 1. Query the Supabase riders table
-        riders_response = supabase.table('riders').select('id, current_geohash').execute()
-        riders = riders_response.data
+        # 1. Look up the rider's active geohash securely from DB instead of accepting it from the flutter client
+        rider_resp = supabase.table('riders').select('current_geohash').eq('id', rider_id).execute()
         
-        if not riders:
-            return {"status": "success", "message": "No riders found to process.", "processed": 0}
+        if not rider_resp.data:
+            raise HTTPException(status_code=404, detail="Rider not found in system")
+            
+        geohash = rider_resp.data[0].get('current_geohash') or 'tdr5w'
 
-        results = []
+        # 2. Generate a standard onboarding quote for the UI layout
+        premium = pricing_engine.calculate_premium(
+            rider_id=rider_id,
+            geohash=geohash,
+            season="summer",
+            rainfall_mm=0.0,
+            weekly_volume=100
+        )
         
-        # 2. Loop through riders to calculate premium and update policies
-        for rider in riders:
-            rider_id = rider.get('id')
-            geohash = rider.get('current_geohash', '')
-            
-            # Call get_premium for each rider's geohash
-            weekly_premium = pricing_engine.get_premium(geohash)
-            
-            # Calculate end_date as NOW() + INTERVAL '7 days'
-            start_date = datetime.utcnow()
-            end_date = start_date + timedelta(days=7)
-            
-            # 3. Insert a new row for each rider into the policies table
-            policy_data = {
-                "rider_id": rider_id,
-                "weekly_premium_inr": weekly_premium,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-                #"status": "active"
-            }
-            
-            supabase.table('policies').insert(policy_data).execute()
-            results.append({"rider_id": rider_id, "weekly_premium_inr": weekly_premium})
-            
         return {
             "status": "success",
-            "message": f"Successfully forced Sunday pricing for {len(riders)} riders.",
-            "data": results
+            "rider_id": rider_id,
+            "weekly_premium_inr": premium,
+            "message": "Premium calculated successfully for the upcoming 7 days."
         }
         
     except Exception as e:

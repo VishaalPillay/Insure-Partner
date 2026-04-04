@@ -12,7 +12,6 @@ class PricingService {
   /// Response:     `{"status": "success", "rider_id": "...", "weekly_premium_inr": 245.50, "message": "..."}`
   Future<PremiumResult> calculatePremium({
     required String riderId,
-    required String geohash,
   }) async {
     final url = Uri.parse(AppConstants.pricingApiUrl);
 
@@ -21,7 +20,6 @@ class PricingService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'rider_id': riderId,
-        'geohash': geohash,
       }),
     );
 
